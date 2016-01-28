@@ -17,7 +17,6 @@
 #include <cr_section_macros.h>
 #include <cstdio>
 #include <iostream>
-
 #define TICKRATE_HZ1 (100)	/* 100 ticks per second */
 
 /*
@@ -42,7 +41,6 @@ enum eventType { eEnter, eExit, eKey, eTick };
 struct event {
 	eventType type;
 	int value;
-
 };
 
 class StateMachine {
@@ -57,6 +55,10 @@ public:
 	void S4(event &e);
 	void HandleState(event &e);
 };
+
+StateMachine::StateMachine() {
+	SetState(Locked);
+}
 
 void StateMachine::SetState(state newState)
 {
@@ -197,7 +199,6 @@ void StateMachine::HandleState(event &e)
 		Unlocked(e);
 	}
 }
-
 
 void SysTick_Handler(void)
 {
