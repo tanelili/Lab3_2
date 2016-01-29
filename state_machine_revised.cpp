@@ -18,91 +18,92 @@
 #include <cstdio>
 #include <iostream>
 #define TICKRATE_HZ1 (100)	/* 100 ticks per second */
+#include <iostream>
+using namespace std;
 
-
-class Event {
-public:	
-	enum eventType { eEnter, eExit, eKey, eTick };
-	eventType type;
-	int value;
+class Machine
+{
+  class State *current;
+  public:
+    Machine();
+    void setCurrent(State *s)
+    {
+        current = s;
+    }
+    void on();
+    void off();
 };
 
-
-class StateMachine {
-public:
-	void HandleState(const Event& e);
-	void SetState(state newState);
-	// other declarations
-private:
-	enum state { Locked, Unlocked, State1, State2, State3, State4 };
-	state currentState;
-	void HandleLocked(const Event& e);
-	void HandleUnlocked(const Event& e);
-	// other declarations
+class State
+{
+  public:
+    virtual void on(Machine *m)
+    {
+        cout << "   already ON\n";
+    }
+    virtual void off(Machine *m)
+    {
+        cout << "   already OFF\n";
+    }
 };
 
-
-void StateMachine::SetState(state newState)
+void Machine::on()
 {
-	event exit = {eExit, 0};
-	event enter = {eEnter, 0};
-	HandleState(exit);
-	currentState = newState;
-	HandleState(enter);
+  current->on(this);
 }
 
-void StateMachine::HandleUnlocked(const Event& e)
+void Machine::off()
 {
-	switch(e.type) {
-	case Event::eEnter:
-		timer = 0;
-		break;
-	case Event::eExit:
-		break;
-	case Event::eKey:
-		led_set(e.value, 1);
-		break;
-	case Event::eTick:
-		timer++;
-		if(timer >= 5) SetState(State2);
-		break;
-	}
-
+  current->off(this);
 }
 
-void StateMachine::HandleLocked(const Event& e)
+class ON: public State
 {
-	switch(e.type) {
-	case Event::eEnter:
-		timer = 0;
-		break;
-	case Event::eExit:
-		break;
-	case Event::eKey:
-		break;
-	case Event::eTick:
-		led_set(1, 0);
-		led_set(2, 0);
-		led_set(3, 0);
-		led_set(4, 0);
-		SetState(State1);
-		break;
-	}
+  public:
+    ON()
+    {
+        cout << "   ON-ctor ";
+    };
+    ~ON()
+    {
+        cout << "   dtor-ON\n";
+    };
+    void off(Machine *m);
+};
+
+class OFF: public State
+{
+  public:
+    OFF()
+    {
+        cout << "   OFF-ctor ";
+    };
+    ~OFF()
+    {
+        cout << "   dtor-OFF\n";
+    };
+    void on(Machine *m)
+    {
+        cout << "   going from OFF to ON";
+        m->setCurrent(new ON());
+        delete this;
+    }
+};
+
+void ON::off(Machine *m)
+{
+  cout << "   going from ON to OFF";
+  m->setCurrent(new OFF());
+  delete this;
 }
 
-void StateMachine::HandleState(const Event& e)
+Machine::Machine()
 {
-	switch(currentState) {
-	case Locked: HandleLocked(e); break;
-	case Unlocked: HandleUnlocked(e); break;
-	case State1: HandleState1(e); break;
-	case State2: HandleState2(e); break;
-	case State3: HandleState3(e); break;
-	case State4: HandleState4(e); break;
-	}
+  current = new OFF();
+  cout << '\n';
 }
 
-void main() {
+void main(void) {
 
 	/* Set up and initialize all required blocks and
 	   functions related to the board hardware */
@@ -141,20 +142,19 @@ void main() {
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 0);
 
 
-	Event tick = { Event::eTick, 0 };
-	Event key;
-	key.type = Event::eKey;
-	key.value = 2;
 while(1) {
-	if(tickFlag) {
-		tickFlag = false;
-		fsm.HandleState(tick);
-		}
+	  void(Machine:: *ptrs[])() =
+	  {
+	    Machine::off, Machine::on
+	  };
 
-	k = isPressed();
-	if(k > 0) {
-		key.value = k;
-		fsm.HandleState(key);
-		}
-	}
+	  Machine fsm;
+	  int num;
+	  while (1)
+	  {
+	    cout << "Enter 0/1: ";
+	    cin >> num;
+	    (fsm. *ptrs[num])();
+	  }
+
 }
