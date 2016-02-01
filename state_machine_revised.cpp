@@ -1,12 +1,6 @@
-/*
-===============================================================================
- Name        : StateMachine Lab 3.2
- Author      : $(author)
- Version     :
- Copyright   : $(copyright)
- Description : main definition
-===============================================================================
- */
+// Keijo.cpp : Defines the entry point for the console application.
+//
+
 #if defined (__USE_LPCOPEN)
 #if defined(NO_BOARD_LIB)
 #include "chip.h"
@@ -14,147 +8,271 @@
 #include "board.h"
 #endif
 #endif
-#include <cr_section_macros.h>
-#include <cstdio>
+
+#include "stdafx.h"
 #include <iostream>
-#define TICKRATE_HZ1 (100)	/* 100 ticks per second */
-#include <iostream>
-using namespace std;
 
-class Machine
-{
-  class State *current;
-  public:
-    Machine();
-    void setCurrent(State *s)
-    {
-        current = s;
-    }
-    void on();
-    void off();
+#define TICKRATE_HZ1 (100)
+
+int timer = 0;
+bool tickFlag = false;
+int k = 1;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+	void SysTick_Handler(void)
+	{
+		static uint32_t ms = 0;
+		ms++;
+
+		if (ms >= 1000) {
+			tickFlag = true;
+		}
+	}
+#ifdef __cplusplus
+}
+#endif
+
+class Event {
+public:
+	enum eventType { eEnter, eExit, eKey, eTick };
+	eventType type;
+	int value;
+	Event(eventType tyyppi, int arvo) {
+		type = tyyppi;
+		value = arvo;
+	};
 };
 
-class State
-{
-  public:
-    virtual void on(Machine *m)
-    {
-        cout << "   already ON\n";
-    }
-    virtual void off(Machine *m)
-    {
-        cout << "   already OFF\n";
-    }
+class StateMachine {
+private:
+	enum state { StateL, StateU, State1, State2, State3, State4 };
+	void Locked(const Event& e);
+	void Unlocked(const Event& e);
+	void S1(const Event& e);
+	void S2(const Event& e);
+	void S3(const Event& e);
+	void S4(const Event& e);
+public:
+	StateMachine() { SetState(StateL); };
+	state currentState = State1;
+	void HandleState(const Event& e);
+	void SetState(state newState);
 };
 
-void Machine::on()
+void StateMachine::SetState(state newState)
 {
-  current->on(this);
+	Event exit = { Event::eExit,0 };
+	Event enter = { Event::eEnter,0 };
+	HandleState(exit);
+	currentState = newState;
+	HandleState(enter);
 }
 
-void Machine::off()
+void StateMachine::Locked(const Event& e)
 {
-  current->off(this);
+	switch (e.type) {
+	case Event::eEnter:
+		printf("Ovi on lukittu.\n");
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 3) {
+			printf("Numero 1 ok\n");
+			SetState(State1);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
+		break;
+	}
+
 }
 
-class ON: public State
+void StateMachine::S1(const Event& e)
 {
-  public:
-    ON()
-    {
-        cout << "   ON-ctor ";
-    };
-    ~ON()
-    {
-        cout << "   dtor-ON\n";
-    };
-    void off(Machine *m);
-};
 
-class OFF: public State
-{
-  public:
-    OFF()
-    {
-        cout << "   OFF-ctor ";
-    };
-    ~OFF()
-    {
-        cout << "   dtor-OFF\n";
-    };
-    void on(Machine *m)
-    {
-        cout << "   going from OFF to ON";
-        m->setCurrent(new ON());
-        delete this;
-    }
-};
-
-void ON::off(Machine *m)
-{
-  cout << "   going from ON to OFF";
-  m->setCurrent(new OFF());
-  delete this;
+	switch (e.type) {
+	case Event::eEnter:
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 3) {
+			printf("Numero 2 ok\n");
+			SetState(State2);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
+		timer++;
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
 }
 
-Machine::Machine()
+void StateMachine::S2(const Event& e)
 {
-  current = new OFF();
-  cout << '\n';
+
+	switch (e.type) {
+	case Event::eEnter:
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 4) {
+			printf("Numero 3 ok\n");
+			SetState(State3);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
+		timer++;
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
 }
+
+void StateMachine::S3(const Event& e)
+{
+
+	switch (e.type) {
+	case Event::eEnter:
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 1) {
+			printf("Numero 4 ok\n");
+			SetState(State4);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
+		timer++;
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
+}
+
+void StateMachine::S4(const Event& e)
+{
+	switch (e.type) {
+	case Event::eEnter:
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 2) {
+			printf("Numero 5 ok\n");
+			SetState(StateU);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
+		timer++;
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
+}
+
+void StateMachine::Unlocked(const Event& e)
+{
+	switch (e.type) {
+	case Event::eEnter:
+		printf("Ovi on avattu.\n");
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		break;
+	case Event::eTick:
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
+}
+
+
+void StateMachine::HandleState(const Event& e)
+{
+	switch (currentState) {
+	case StateL: Locked(e); break;
+	case State1: S1(e); break;
+	case State2: S2(e); break;
+	case State3: S3(e); break;
+	case State4: S4(e); break;
+	case StateU: Unlocked(e); break;
+	}
+}
+
 
 void main(void) {
+	/*
 
-	/* Set up and initialize all required blocks and
-	   functions related to the board hardware */
-	Board_Init();
-
-	/* The sysTick counter only has 24 bits of precision, so it will
-  	   overflow quickly with a fast core clock. You can alter the
-	   sysTick divider to generate slower sysTick clock rates.  */
-	Chip_Clock_SetSysTickClockDiv(1);
-
-	/* A SysTick divider is present that scales the sysTick rate down
-	   From the core clock. Using the SystemCoreClock variable as a
-	   rate reference for the SysTick_Config() function won't work,
-	   so get the sysTick rate by calling Chip_Clock_GetSysTickClockRate() */
-	uint32_t sysTickRate = Chip_Clock_GetSysTickClockRate();
-
-	// Enable and setup SysTick Timer at a periodic rate
-	SysTick_Config(sysTickRate / TICKRATE_HZ1);
-
-	//    Nabbulat ulkoisesta levystä    */
-
-	// Määritellään nappi 1 toimimaan inputtina
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 10);
 
-	// Määritellään nappi 2 toimimaan inputtina
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 16, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 16);
 
-	// Määritellään nappi 3 toimimaan inputtina
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 3);
 
-	// Määritellään nappi 4 toimimaan inputtina
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 0, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 0);
 
+	Board_Init();
 
-while(1) {
-	  void(Machine:: *ptrs[])() =
-	  {
-	    Machine::off, Machine::on
-	  };
+	Chip_Clock_SetSysTickClockDiv(1);
 
-	  Machine fsm;
-	  int num;
-	  while (1)
-	  {
-	    cout << "Enter 0/1: ";
-	    cin >> num;
-	    (fsm. *ptrs[num])();
-	  }
+	uint32_t sysTickRate = Chip_Clock_GetSysTickClockRate();
+
+	SysTick_Config(sysTickRate / TICKRATE_HZ1);
+
+	*/
+
+	Event tick = { Event::eTick, 0 };
+	Event key = { Event::eKey, 0 };
+
+	StateMachine fsm;
+
+	key.type = Event::eKey;
+
+	while (1) {
+
+		if (tickFlag) {
+			tickFlag = false;
+			fsm.HandleState(tick);
+		}
+
+		std::cout << "Anna numero: " << std::endl;
+		std::cin >> k;
+		key.value = k;
+		fsm.HandleState(key);
+
+
+	}
 
 }
