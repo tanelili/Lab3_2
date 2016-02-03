@@ -1,11 +1,5 @@
-/*
-===============================================================================
- Name        : StateMachine Lab 3.2
- Author      : $(author)
- Version     :
- Copyright   : $(copyright)
- Description : main definition
-===============================================================================
+// Keijo.cpp : Defines the entry point for the console application.
+//
 
 #if defined (__USE_LPCOPEN)
 #if defined(NO_BOARD_LIB)
@@ -14,266 +8,271 @@
 #include "board.h"
 #endif
 #endif
-#include <cr_section_macros.h>
-#include <cstdio>
+
+#include "stdafx.h"
 #include <iostream>
-#define TICKRATE_HZ1 (100)	/* 100 ticks per second
 
-/*
-//Kombinaatio
-//1
-Chip_GPIO_GetPinState(LPC_GPIO, 1,3)
-// 2
-Chip_GPIO_GetPinState(LPC_GPIO, 1,3)
-// 3
-Chip_GPIO_GetPinState(LPC_GPIO, 0,16)
-// 4
-Chip_GPIO_GetPinState(LPC_GPIO, 0,0)
-// 5
-Chip_GPIO_GetPinState(LPC_GPIO, 0,10)
+#define TICKRATE_HZ1 (100)
 
+int timer = 0;
+bool tickFlag = false;
+int k = 1;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+	void SysTick_Handler(void)
+	{
+		static uint32_t ms = 0;
+		ms++;
 
-volatile int timer = 0;
-volatile int ms = 0;
+		if (ms >= 1000) {
+			tickFlag = true;
+		}
+	}
+#ifdef __cplusplus
+}
+#endif
 
-enum eventType { eEnter, eExit, eKey };
-enum state { currentState ,Unlocked, Locked, S1, S2, S3, S4 };
-
-struct event {
+class Event {
+public:
+	enum eventType { eEnter, eExit, eKey, eTick };
 	eventType type;
 	int value;
+	Event(eventType tyyppi, int arvo) {
+		type = tyyppi;
+		value = arvo;
+	};
 };
 
 class StateMachine {
-public:
-	StateMachine ();
-	void SetState(state newState);
-	void Locked(const event &e);
-	void Unlocked(const event &e);
-	void S1(const event &e);
-	void S2(const event &e);
-	void S3(const event &e);
-	void S4(const event &e);
-	void HandleState(const event &e);
 private:
-	state currentState;
+	enum state { StateL, StateU, State1, State2, State3, State4 };
+	void Locked(const Event& e);
+	void Unlocked(const Event& e);
+	void S1(const Event& e);
+	void S2(const Event& e);
+	void S3(const Event& e);
+	void S4(const Event& e);
+public:
+	StateMachine() { SetState(StateL); };
+	state currentState = State1;
+	void HandleState(const Event& e);
+	void SetState(state newState);
 };
-
-StateMachine::StateMachine() {
-}
 
 void StateMachine::SetState(state newState)
 {
-	event exit = {eExit, 0};
-	event enter = {eEnter, 0};
+	Event exit = { Event::eExit,0 };
+	Event enter = { Event::eEnter,0 };
+	HandleState(exit);
 	currentState = newState;
 	HandleState(enter);
 }
 
-// Lukko kiinni, punainen palaa
-void StateMachine::Locked(const event &e)
+void StateMachine::Locked(const Event& e)
 {
-	switch(e.type) {
-	case eEnter:
-		Board_LED_Set(0, true);
-		timer = 0;
+	switch (e.type) {
+	case Event::eEnter:
+		printf("Ovi on lukittu.\n");
 		break;
-	case eExit:
+	case Event::eExit:
 		break;
-	case eKey:
-		SetState(S1);
-		break;
-	}
-}
-
-// Lukko auki, vihreä palaa
-void StateMachine::Unlocked(const event &e)
-{
-	switch(e.type) {
-	case eEnter:
-		//Tässä ovi aukeaa
-		timer = 0;
-		break;
-	case eExit:
-		break;
-	case eKey:
-		break;
-	case eTick:
-		// led_set(1, 0);
-		HandleState(Locked);
-		break;
-	}
-}
-void StateMachine::S1(const event &e)
-{
-	switch(e.type) {
-	case eKey:
-		if (e.value == 3){
-			SetState(S2);
-		}else{
-			SetState(Locked);
+	case Event::eKey:
+		if (e.value == 3) {
+			printf("Numero 1 ok\n");
+			SetState(State1);
+		}
+		else {
+			SetState(StateL);
 		}
 		break;
-	case eTick:
-		timer++;
-		if(timer >= 5) SetState(Locked);
+	case Event::eTick:
 		break;
 	}
 
 }
 
-void StateMachine::S2(const event &e)
+void StateMachine::S1(const Event& e)
 {
-	switch(e.type) {
-	case eEnter:
-		timer = 0;
+
+	switch (e.type) {
+	case Event::eEnter:
 		break;
-	case eExit:
+	case Event::eExit:
 		break;
-	case eKey:
-		if (e.value == 2){
-			SetState(S3);
-		}else{
-			SetState(Locked);
+	case Event::eKey:
+		if (e.value == 3) {
+			printf("Numero 2 ok\n");
+			SetState(State2);
+		}
+		else {
+			SetState(StateL);
 		}
 		break;
-	case eTick:
+	case Event::eTick:
 		timer++;
-		if(timer >= 5) SetState(Locked);
-		break;
-	}
-
-}
-
-void StateMachine::S3(const event &e)
-{
-	switch(e.type) {
-	case eEnter:
-		timer = 0;
-		break;
-	case eExit:
-		break;
-	case eKey:
-		if (e.value == 4){
-			SetState(S4);
-		}else{
-			SetState(Locked);
+		if (timer >= 5) {
+			SetState(StateL);
 		}
 		break;
-	case eTick:
-		timer++;
-		if(timer >= 5) SetState(Locked);
-		break;
 	}
-
 }
 
-void StateMachine::S4(const event &e)
+void StateMachine::S2(const Event& e)
 {
-	switch(e.type) {
-	case eEnter:
-		timer = 0;
+
+	switch (e.type) {
+	case Event::eEnter:
 		break;
-	case eExit:
+	case Event::eExit:
 		break;
-	case eKey:
-		if (e.value == 1){
-			SetState(Unlocked);
-		}else{
-			SetState(Locked);
+	case Event::eKey:
+		if (e.value == 4) {
+			printf("Numero 3 ok\n");
+			SetState(State3);
+		}
+		else {
+			SetState(StateL);
 		}
 		break;
-	case eTick:
+	case Event::eTick:
 		timer++;
-		if(timer >= 5) SetState(Locked);
-		break;
-	}
-
-}
-
-void StateMachine::HandleState(const event &e)
-{
-	switch (currentState){
-		case Locked:
-			Locked(e);
-			break;
-		case Unlocked:
-			Unlocked(e);
-			break;
-		case S1:
-			S1(e);
-			break;
-		case S2:
-			S2(e);
-			break;
-		case S3:
-			S3(e);
-			break;
-		case S4:
-			S4(e);
-			break;
-		case S5:
-			S5(e);
+		if (timer >= 5) {
+			SetState(StateL);
+		}
 		break;
 	}
 }
 
-void SysTick_Handler(void)
+void StateMachine::S3(const Event& e)
 {
-	// implement real time clock with hours, minutes and seconds here
-	ms++;
-	if ( ms == 100) {
+
+	switch (e.type) {
+	case Event::eEnter:
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 1) {
+			printf("Numero 4 ok\n");
+			SetState(State4);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
 		timer++;
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
 	}
 }
 
-/*void main () {
+void StateMachine::S4(const Event& e)
+{
+	switch (e.type) {
+	case Event::eEnter:
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		if (e.value == 2) {
+			printf("Numero 5 ok\n");
+			SetState(StateU);
+		}
+		else {
+			SetState(StateL);
+		}
+		break;
+	case Event::eTick:
+		timer++;
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
+}
 
-	// #if defined (__USE_LPCOPEN)
-	// Read clock settings and update SystemCoreClock variable
-	SystemCoreClockUpdate();
-	// #if !defined(NO_BOARD_LIB)
-	// Set up and initialize all required blocks and
-	// functions related to the board hardware
-	Board_Init();
+void StateMachine::Unlocked(const Event& e)
+{
+	switch (e.type) {
+	case Event::eEnter:
+		printf("Ovi on avattu.\n");
+		break;
+	case Event::eExit:
+		break;
+	case Event::eKey:
+		break;
+	case Event::eTick:
+		if (timer >= 5) {
+			SetState(StateL);
+		}
+		break;
+	}
+}
 
-	/* The sysTick counter only has 24 bits of precision, so it will
-			   overflow quickly with a fast core clock. You can alter the
-			   sysTick divider to generate slower sysTick clock rates.
-	Chip_Clock_SetSysTickClockDiv(1);
 
-	/* A SysTick divider is present that scales the sysTick rate down
-			   from the core clock. Using the SystemCoreClock variable as a
-			   rate reference for the SysTick_Config() function won't work,
-			   so get the sysTick rate by calling Chip_Clock_GetSysTickClockRate()
-	uint32_t sysTickRate = Chip_Clock_GetSysTickClockRate();
+void StateMachine::HandleState(const Event& e)
+{
+	switch (currentState) {
+	case StateL: Locked(e); break;
+	case State1: S1(e); break;
+	case State2: S2(e); break;
+	case State3: S3(e); break;
+	case State4: S4(e); break;
+	case StateU: Unlocked(e); break;
+	}
+}
 
-	/* Enable and setup SysTick Timer at a periodic rate
-	SysTick_Config(sysTickRate / TICKRATE_HZ1);
-	/* Nabulat
-	// Määritellään nappi 1 toimimaan inputtina
+
+void main(void) {
+	/*
+
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 10);
-	// Määritellään nappi 2 toimimaan inputtina
+
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 16, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 16);
-	// Määritellään nappi 3 toimimaan inputtina
+
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 3);
-	// Määritellään nappi 4 toimimaan inputtina
+
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 0, (IOCON_MODE_PULLUP | IOCON_DIGMODE_EN | IOCON_INV_EN));
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 0);
 
+	Board_Init();
 
-	while(1){
-		StateMachine state;
-		state.StateMachine ();
+	Chip_Clock_SetSysTickClockDiv(1);
 
+	uint32_t sysTickRate = Chip_Clock_GetSysTickClockRate();
 
+	SysTick_Config(sysTickRate / TICKRATE_HZ1);
 
-		// Enter an infinite loop, just incrementing a counter
+	*/
+
+	Event tick = { Event::eTick, 0 };
+	Event key = { Event::eKey, 0 };
+
+	StateMachine fsm;
+
+	key.type = Event::eKey;
+
+	while (1) {
+
+		if (tickFlag) {
+			tickFlag = false;
+			fsm.HandleState(tick);
+		}
+
+		std::cout << "Anna numero: " << std::endl;
+		std::cin >> k;
+		key.value = k;
+		fsm.HandleState(key);
+
 
 	}
-	return 0 ;
- } */
+
+}
